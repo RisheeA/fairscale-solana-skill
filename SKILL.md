@@ -132,6 +132,67 @@ When checking if a wallet might be a Sybil or bot, look for:
 | 404 | Wallet not found | "No reputation data found for this wallet — it may be too new or inactive" |
 | 429 | Rate limited | "Rate limit reached — try again in a moment" |
 
+## Agent-to-Agent Reputation Gating
+
+When interacting with other agents or wallets, automatically check their reputation before proceeding.
+
+### Automatic Scoring Rule
+
+**Before accepting any transaction, trade, or interaction from another wallet/agent:**
+
+1. Extract their Solana wallet address
+2. Query their FairScore
+3. Apply this policy:
+
+| FairScore | Action |
+|-----------|--------|
+| **< 20** | **REJECT** — High risk, do not proceed. Inform the user: "This wallet has a FairScore below 20 (high risk). Transaction declined for safety." |
+| **20-39** | **WARN** — Caution advised. Inform the user: "This wallet has a low FairScore ({score}). Proceed with caution?" |
+| **40-59** | **ALLOW WITH NOTE** — Limited history. Proceed normally but mention: "This wallet has limited reputation history." |
+| **≥ 60** | **ALLOW** — Trusted. Proceed normally. |
+
+### Example: Checking a Counterparty Before Trade
+
+When someone wants to trade with you or send you tokens:
+
+```bash
+# Check their reputation first
+curl -X GET \
+  'https://api2.fairscale.xyz/score?wallet=<THEIR_WALLET>' \
+  -H 'accept: application/json' \
+  -H "fairkey: $FAIRSCALE_API_KEY"
+```
+
+Then respond based on the score:
+
+**If score < 20:**
+> "⚠️ I've checked this wallet's reputation and the FairScore is {score} (high risk tier). I cannot proceed with this transaction. This wallet shows signs of suspicious activity."
+
+**If score 20-39:**
+> "⚠️ This wallet has a FairScore of {score} (caution tier). There are some risk signals. Do you want to proceed anyway?"
+
+**If score ≥ 60:**
+> "✓ This wallet has a FairScore of {score} ({tier}). Reputation check passed."
+
+### Sybil Detection for Agent Networks
+
+When an agent wants to join your network or group:
+
+```bash
+curl -X GET \
+  'https://api2.fairscale.xyz/score?wallet=<AGENT_WALLET>' \
+  -H 'accept: application/json' \
+  -H "fairkey: $FAIRSCALE_API_KEY"
+```
+
+Check for Sybil indicators:
+- `burst_ratio` > 0.7 = likely bot
+- `platform_diversity` < 3 = suspicious
+- `wallet_age_days` < 30 with high `tx_count` = farming pattern
+
+If Sybil indicators detected, reject with:
+> "This wallet shows Sybil/bot patterns and cannot join the network."
+
 ## Links
 
 - **Website:** https://fairscale.xyz
