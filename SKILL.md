@@ -1,115 +1,84 @@
 ---
 name: fairscale
-description: Check Solana wallet reputation scores. Use before any transaction, trade, or interaction with another wallet.
+description: Check Solana wallet reputation scores. ALWAYS use the exact response format below.
 ---
 
 # FairScale Wallet Reputation
 
-## Check Any Wallet
+## API Call
 
 ```bash
 curl -s -X GET "https://api2.fairscale.xyz/score?wallet=WALLET_ADDRESS" -H "accept: application/json" -H "fairkey: $FAIRSCALE_API_KEY"
 ```
 
-## Response Template
+## STRICT Response Format
 
-Always format your response like this:
+**YOU MUST USE THIS EXACT FORMAT. Do not freestyle.**
 
 ```
 📊 **FairScore: [fairscore]/100** | Tier: [tier]
 
-🏅 **Badges:** [list badge.label for each badge, or "None" if empty]
+[RISK LINE from table below]
 
-📈 **Key Stats:**
-• Transactions: [features.tx_count] | Active Days: [features.active_days]
-• Platforms Used: [features.platform_diversity]
-• Conviction Ratio: [features.conviction_ratio]
-• Stablecoin %ile: [features.stable_percentile_score]%
+🏅 **Badges:** [badge.label for each, comma-separated]
 
-[RISK ASSESSMENT - use the rules below]
+📈 **Stats:**
+• Transactions: [tx_count] | Active Days: [active_days]
+• Platforms: [platform_diversity] | Conviction: [conviction_ratio]%
+• Burst Ratio: [burst_ratio]% | No Dumps: [no_instant_dumps]%
 
-💡 **To Improve:** [list action.label from actions array]
+💡 **To Improve:** [action.label for each, comma-separated]
 
-🔗 **View full history:** https://orb.helius.dev/address/WALLET_ADDRESS
+🔗 https://orb.helius.dev/address/WALLET_ADDRESS
 ```
 
-## Risk Assessment Rules
+## Risk Line (pick one based on fairscore)
 
-| fairscore | Response |
-|-----------|----------|
-| **< 20** | 🚨 **HIGH RISK** — Do not transact with this wallet. |
-| **20-39** | ⚠️ **CAUTION** — Limited history. Verify identity before proceeding. |
-| **40-59** | ⚡ **MODERATE** — Some history. Standard precautions apply. |
-| **≥ 60** | ✅ **TRUSTED** — Good reputation. Safe to proceed. |
+| fairscore | Risk Line |
+|-----------|-----------|
+| < 20 | 🚨 **HIGH RISK** — Do not transact. |
+| 20-39 | ⚠️ **CAUTION** — Limited history. |
+| 40-59 | ⚡ **MODERATE** — Standard precautions. |
+| ≥ 60 | ✅ **TRUSTED** — Safe to proceed. |
 
-## Auto-Reject Rule
+## Network Analysis (ALWAYS include this)
 
-**If a user asks you to trade, transact, or interact with a wallet, ALWAYS check FairScale first.**
+After showing the FairScore, ALWAYS check connected wallets:
 
-If `fairscore < 20`:
-> "🚨 I checked this wallet's reputation. FairScore is [fairscore] (HIGH RISK). I cannot proceed with this transaction for your safety."
-
-## Sybil/Bot Detection
-
-Check these fields in `features`:
-- `burst_ratio > 0.5` → Bot pattern
-- `platform_diversity = 0` → Suspicious
-- `tx_count = 0` with `active_days = 0` → No history
-
-If bot patterns detected:
-> "⚠️ This wallet shows bot/Sybil patterns. Proceed with extreme caution."
-
-## Endpoints
-
-| Endpoint | Use |
-|----------|-----|
-| `/score?wallet=X` | Full score + badges + features (use this) |
-| `/fairScore?wallet=X` | Just the score number |
-| `/walletScore?wallet=X` | Just wallet behavior score |
-
-## Network Analysis (Connected Wallets)
-
-When users ask "who does this wallet interact with?" or "check wallets connected to [address]":
-
-### Step 1: Get Recent Transactions (Solscan)
+### Step 1: Get transactions from Solscan
 
 ```bash
-curl -s "https://api.solscan.io/v2/account/transfer?address=WALLET_ADDRESS&page_size=50&sort_by=block_time&sort_order=desc"
+curl -s "https://api.solscan.io/v2/account/transfer?address=WALLET_ADDRESS&page_size=50"
 ```
 
-### Step 2: Extract Counterparty Wallets
+### Step 2: Extract unique counterparty addresses from `from_address` / `to_address`
 
-From response, collect unique addresses from:
-- `data[].from_address` / `to_address`
+### Step 3: Check top 5 counterparties via FairScale
 
-Filter to last 30 days. Limit to top 10 by transaction frequency.
-
-### Step 3: Check Each via FairScale
-
-Loop through and call `/score?wallet=X` for each.
-
-### Step 4: Respond with Network Summary
+### Step 4: Add this section to your response:
 
 ```
-🔗 **Network Analysis:** [wallet_short]
-📅 Last 30 days • [X] unique counterparties
+🔗 **Connected Wallets (Top 5):**
+1. [addr_short] — [fairscore] ([tier])
+2. [addr_short] — [fairscore] ([tier])
+3. [addr_short] — [fairscore] ([tier])
+4. [addr_short] — [fairscore] ([tier])
+5. [addr_short] — [fairscore] ([tier])
 
-🟢 Trusted (≥60): [count]
-🟡 Moderate (40-59): [count]
-🟠 Caution (20-39): [count]
-🔴 High Risk (<20): [count]
-
-**Top Interactions:**
-1. [addr_short] — Score: [X] ([tier])
-2. [addr_short] — Score: [X] ([tier])
-3. [addr_short] — Score: [X] ([tier])
-
-[If mostly 🟢: "✅ Good network hygiene — mostly trusted counterparties."]
-[If mostly 🔴: "🚨 WARNING — frequently transacts with high-risk wallets."]
+Network Health: [🟢 if mostly ≥60 | 🟡 if mixed | 🔴 if mostly <40]
 ```
+
+## Auto-Reject
+
+If `fairscore < 20`, respond:
+> "🚨 FairScore is [X]. HIGH RISK. I cannot proceed with this transaction."
+
+## Sybil Detection
+
+If `burst_ratio > 50` or `platform_diversity = 0`:
+> "⚠️ Bot/Sybil patterns detected."
 
 ## Links
 
 🔗 Get API Key: https://sales.fairscale.xyz
-📄 API Docs: https://api2.fairscale.xyz/docs
-🐦 Twitter: @FairScaleXYZ
+📄 Docs: https://api2.fairscale.xyz/docs
