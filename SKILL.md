@@ -1,100 +1,117 @@
 ---
 name: fairscale-solana
-description: Check Solana wallet reputation scores before transactions. Returns FairScore (0-100), risk tier, badges, and connected wallet analysis.
+description: Check Solana wallet reputation. MUST call the API for every wallet — never guess or reuse previous data.
 license: MIT
 metadata:
   author: FairScale
-  version: "1.0.0"
-  tags: ["solana", "wallet", "reputation", "sybil", "defi"]
+  version: "2.0.0"
 ---
 
 # FairScale Wallet Reputation
 
-Check any Solana wallet's reputation score before transacting.
+## CRITICAL RULES
 
-## Quick Start
-
-```bash
-curl -s "https://api2.fairscale.xyz/score?wallet=WALLET_ADDRESS" \
-  -H "accept: application/json" \
-  -H "fairkey: $FAIRSCALE_API_KEY"
-```
-
-**Important:** The endpoint is `/score` — not `/api/v1/score` or anything else.
-
-For full API details, see [references/API.md](references/API.md).
+1. **ALWAYS call the API** — Never guess, estimate, or reuse data from previous wallets
+2. **Each wallet is unique** — Do not assume similarity to other wallets
+3. **Use ONLY the values from the API response** — Do not calculate or modify scores
+4. **If the API fails, say so** — Do not make up data
 
 ---
 
-## Response Format
+## API CALL
 
-Use this EXACT format for every response:
+**Endpoint:** `https://api2.fairscale.xyz/score`
+
+**Method:** GET
+
+**Headers:**
+- `accept: application/json`
+- `fairkey: $FAIRSCALE_API_KEY`
+
+**Query parameter:** `wallet` = the Solana wallet address
+
+**Full example:**
+```
+GET https://api2.fairscale.xyz/score?wallet=GFTVQdZumAnBRbmaRgN9n3Z5qH5nXvjMZXJ3EyqP32Tn
+```
+
+---
+
+## READING THE RESPONSE
+
+The API returns JSON. Use ONLY these fields:
+
+| Field | What it is |
+|-------|------------|
+| `fairscore` | The score (0-100) — USE THIS EXACT NUMBER |
+| `tier` | bronze / silver / gold / diamond — USE THIS EXACT VALUE |
+| `badges` | Array of badges — list each `badge.label` |
+| `actions` | Array of improvements — list each `action.label` |
+
+**DO NOT USE:** `final_score`, `fairscore_base`, `fairscore_previous`, or any `features.*` values in the output.
+
+---
+
+## OUTPUT FORMAT
 
 ```
 📊 FairScore: [fairscore]/100 | Tier: [tier]
 
 [RISK LINE]
 
-🏅 Badges: [comma-separated badge labels]
+🏅 Badges: [badge labels, comma-separated]
 
-📈 Stats: [tx_count] txns | [active_days] active days | [platform_diversity] platforms
-
-💡 Improve: [comma-separated action labels]
-
-🔗 Connected Wallets:
-• [addr]... — [score] ([tier]) — https://orb.helius.dev/address/[full_addr]
-• [addr]... — [score] ([tier]) — https://orb.helius.dev/address/[full_addr]
-• [addr]... — [score] ([tier]) — https://orb.helius.dev/address/[full_addr]
-
-Network: [🟢 Healthy | 🟡 Mixed | 🔴 Risky]
+💡 Improve: [action labels, or "None"]
 ```
 
-### Risk Lines
-
-| Score | Line |
-|-------|------|
-| < 20 | 🚨 HIGH RISK — Do not transact |
-| 20-39 | ⚠️ CAUTION — Limited history |
-| 40-59 | ⚡ MODERATE — Standard precautions |
-| ≥ 60 | ✅ TRUSTED — Safe to proceed |
+**Risk line rules:**
+- fairscore < 20 → `🚨 HIGH RISK — Do not transact`
+- fairscore 20-39 → `⚠️ CAUTION — Limited history`
+- fairscore 40-59 → `⚡ MODERATE — Standard precautions`
+- fairscore ≥ 60 → `✅ TRUSTED — Safe to proceed`
 
 ---
 
-## Connected Wallets (Required)
+## EXAMPLE
 
-ALWAYS include connected wallet analysis. Steps:
-
-1. Get recent transactions:
-```bash
-curl -s "https://api.mainnet-beta.solana.com" -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"getSignaturesForAddress","params":["WALLET_ADDRESS",{"limit":10}]}'
+**API returns:**
+```json
+{
+  "fairscore": 95.9,
+  "tier": "diamond",
+  "badges": [
+    {"label": "LST Staker"},
+    {"label": "Diamond Hands"},
+    {"label": "Veteran"}
+  ],
+  "actions": []
+}
 ```
 
-2. Get transaction details for each signature to find counterparty addresses
+**You output:**
+```
+📊 FairScore: 95.9/100 | Tier: diamond
 
-3. Check top 3-5 counterparties via FairScale API
+✅ TRUSTED — Safe to proceed
 
-4. Include in response with Orb links
+🏅 Badges: LST Staker, Diamond Hands, Veteran
 
----
-
-## Auto-Reject
-
-If `fairscore < 20`:
-
-> "🚨 Cannot proceed. FairScore is [X] — HIGH RISK wallet."
-
-## Sybil Detection
-
-If `burst_ratio > 50` or `platform_diversity = 0`:
-
-> "⚠️ Bot/Sybil patterns detected."
+💡 Improve: None
+```
 
 ---
 
-## Links
+## ERRORS
 
-- Get API Key: https://sales.fairscale.xyz
-- API Docs: https://api2.fairscale.xyz/docs
-- Twitter: @FairScaleXYZ
+If the API returns an error or no data:
+```
+❌ Could not retrieve FairScore for this wallet. Please try again.
+```
+
+**Never invent scores. Never guess. Always call the API.**
+
+---
+
+## GET API KEY
+
+https://sales.fairscale.xyz
