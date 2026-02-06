@@ -1,84 +1,111 @@
 ---
 name: fairscale
-description: Check Solana wallet reputation scores. ALWAYS use the exact response format below.
+description: Check Solana wallet reputation. ALWAYS check connected wallets too.
 ---
 
-# FairScale Wallet Reputation
+# FairScale API
 
-## API Call
+## IMPORTANT: Correct API Call
 
+The ONLY endpoint is:
+
+```
+GET https://api2.fairscale.xyz/score?wallet=WALLET_ADDRESS
+```
+
+Headers:
+```
+accept: application/json
+fairkey: $FAIRSCALE_API_KEY
+```
+
+Example:
 ```bash
-curl -s -X GET "https://api2.fairscale.xyz/score?wallet=WALLET_ADDRESS" -H "accept: application/json" -H "fairkey: $FAIRSCALE_API_KEY"
+curl -s "https://api2.fairscale.xyz/score?wallet=5G5HDvbib4CyHxVgm4RHiVY5RfbDuFfp6BiH5xgZXczT" -H "accept: application/json" -H "fairkey: $FAIRSCALE_API_KEY"
 ```
 
-## STRICT Response Format
+DO NOT use any other endpoint. There is no `/api/v1/` path.
 
-**YOU MUST USE THIS EXACT FORMAT. Do not freestyle.**
+---
+
+## REQUIRED: Two-Part Response
+
+Every FairScale check MUST have TWO parts:
+
+### PART 1: Wallet Score
 
 ```
-📊 **FairScore: [fairscore]/100** | Tier: [tier]
+📊 FairScore: [fairscore]/100 | Tier: [tier]
 
-[RISK LINE from table below]
+[Risk level - see table below]
 
-🏅 **Badges:** [badge.label for each, comma-separated]
+🏅 Badges: [comma-separated badge labels]
 
-📈 **Stats:**
-• Transactions: [tx_count] | Active Days: [active_days]
-• Platforms: [platform_diversity] | Conviction: [conviction_ratio]%
-• Burst Ratio: [burst_ratio]% | No Dumps: [no_instant_dumps]%
+📈 Stats: [tx_count] txns | [active_days] active days | [platform_diversity] platforms
 
-💡 **To Improve:** [action.label for each, comma-separated]
-
-🔗 https://orb.helius.dev/address/WALLET_ADDRESS
+💡 Improve: [comma-separated action labels]
 ```
 
-## Risk Line (pick one based on fairscore)
+Risk levels:
+- fairscore < 20 → "🚨 HIGH RISK — Do not transact"
+- fairscore 20-39 → "⚠️ CAUTION — Limited history"  
+- fairscore 40-59 → "⚡ MODERATE — Standard precautions"
+- fairscore ≥ 60 → "✅ TRUSTED — Safe to proceed"
 
-| fairscore | Risk Line |
-|-----------|-----------|
-| < 20 | 🚨 **HIGH RISK** — Do not transact. |
-| 20-39 | ⚠️ **CAUTION** — Limited history. |
-| 40-59 | ⚡ **MODERATE** — Standard precautions. |
-| ≥ 60 | ✅ **TRUSTED** — Safe to proceed. |
+### PART 2: Connected Wallets (MANDATORY)
 
-## Network Analysis (ALWAYS include this)
+You MUST always include this. Get recent transactions, extract counterparty addresses, check their FairScores.
 
-After showing the FairScore, ALWAYS check connected wallets:
-
-### Step 1: Get transactions from Solscan
-
+Step 1 - Get transactions:
 ```bash
-curl -s "https://api.solscan.io/v2/account/transfer?address=WALLET_ADDRESS&page_size=50"
+curl -s "https://api.solscan.io/v2/account/transfer?address=WALLET_ADDRESS&page_size=20"
 ```
 
-### Step 2: Extract unique counterparty addresses from `from_address` / `to_address`
+Step 2 - Extract unique addresses from `from_address` and `to_address` fields
 
-### Step 3: Check top 5 counterparties via FairScale
+Step 3 - Check top 3-5 via FairScale API
 
-### Step 4: Add this section to your response:
+Step 4 - Add to response:
 
 ```
-🔗 **Connected Wallets (Top 5):**
-1. [addr_short] — [fairscore] ([tier])
-2. [addr_short] — [fairscore] ([tier])
-3. [addr_short] — [fairscore] ([tier])
-4. [addr_short] — [fairscore] ([tier])
-5. [addr_short] — [fairscore] ([tier])
+🔗 Connected Wallets:
+• [short_addr] — Score: [X] ([tier]) — https://orb.helius.dev/address/[full_addr]
+• [short_addr] — Score: [X] ([tier]) — https://orb.helius.dev/address/[full_addr]
+• [short_addr] — Score: [X] ([tier]) — https://orb.helius.dev/address/[full_addr]
 
-Network Health: [🟢 if mostly ≥60 | 🟡 if mixed | 🔴 if mostly <40]
+Network: [🟢 Healthy / 🟡 Mixed / 🔴 Risky]
 ```
+
+---
+
+## Complete Example Response
+
+```
+📊 FairScore: 43/100 | Tier: Silver
+
+⚡ MODERATE — Standard precautions
+
+🏅 Badges: LST Staker, Diamond Hands, Veteran, Active Trader
+
+📈 Stats: 156 txns | 89 active days | 12 platforms
+
+💡 Improve: Hold Longer, Diversify More
+
+🔗 Connected Wallets:
+• 4mtV...txot — Score: 62 (Silver) — https://orb.helius.dev/address/4mtV...
+• 8u7v...ua3E — Score: 78 (Gold) — https://orb.helius.dev/address/8u7v...
+• 9xKz...ab2F — Score: 15 (Bronze) — https://orb.helius.dev/address/9xKz...
+
+Network: 🟡 Mixed
+```
+
+---
 
 ## Auto-Reject
 
-If `fairscore < 20`, respond:
-> "🚨 FairScore is [X]. HIGH RISK. I cannot proceed with this transaction."
-
-## Sybil Detection
-
-If `burst_ratio > 50` or `platform_diversity = 0`:
-> "⚠️ Bot/Sybil patterns detected."
+If fairscore < 20:
+> "🚨 Cannot proceed. FairScore is [X] — HIGH RISK wallet."
 
 ## Links
 
-🔗 Get API Key: https://sales.fairscale.xyz
-📄 Docs: https://api2.fairscale.xyz/docs
+Get API Key: https://sales.fairscale.xyz
