@@ -4,10 +4,12 @@ description: Check Solana wallet reputation. MUST call the API for every wallet 
 license: MIT
 metadata:
   author: FairScale
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # FairScale Wallet Reputation
+
+**Full API Docs:** https://docs.fairscale.xyz
 
 ## CRITICAL RULES
 
@@ -18,37 +20,33 @@ metadata:
 
 ---
 
-## API CALL
+## API ENDPOINT
 
-**Endpoint:** `https://api2.fairscale.xyz/score`
-
-**Method:** GET
+```
+GET https://api2.fairscale.xyz/score?wallet=WALLET_ADDRESS
+```
 
 **Headers:**
-- `accept: application/json`
-- `fairkey: $FAIRSCALE_API_KEY`
+- `fairkey: YOUR_API_KEY` (required)
 
-**Query parameter:** `wallet` = the Solana wallet address
-
-**Full example:**
-```
-GET https://api2.fairscale.xyz/score?wallet=GFTVQdZumAnBRbmaRgN9n3Z5qH5nXvjMZXJ3EyqP32Tn
+**Example Request:**
+```bash
+curl -X GET "https://api2.fairscale.xyz/score?wallet=7xKXtg2CM87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU" \
+  -H "fairkey: YOUR_API_KEY"
 ```
 
 ---
 
-## READING THE RESPONSE
+## RESPONSE FIELDS
 
-The API returns JSON. Use ONLY these fields:
+| Field | Type | Description |
+|-------|------|-------------|
+| `fairscore` | number | Combined FairScore (wallet + social) — **USE THIS** |
+| `tier` | string | `bronze`, `silver`, `gold`, or `platinum` |
+| `badges` | array | Earned badges with `label` and `description` |
+| `actions` | array | Suggested improvements |
 
-| Field | What it is |
-|-------|------------|
-| `fairscore` | The score (0-100) — USE THIS EXACT NUMBER |
-| `tier` | bronze / silver / gold / diamond — USE THIS EXACT VALUE |
-| `badges` | Array of badges — list each `badge.label` |
-| `actions` | Array of improvements — list each `action.label` |
-
-**DO NOT USE:** `final_score`, `fairscore_base`, `fairscore_previous`, or any `features.*` values in the output.
+**DO NOT USE:** `fairscore_base`, `social_score`, or `features.*` in output.
 
 ---
 
@@ -74,27 +72,25 @@ The API returns JSON. Use ONLY these fields:
 
 ## EXAMPLE
 
-**API returns:**
+**API Response:**
 ```json
 {
-  "fairscore": 95.9,
-  "tier": "diamond",
+  "fairscore": 65.3,
+  "tier": "gold",
   "badges": [
-    {"label": "LST Staker"},
-    {"label": "Diamond Hands"},
-    {"label": "Veteran"}
+    {"label": "Diamond Hands", "description": "Long-term holder with conviction"}
   ],
   "actions": []
 }
 ```
 
-**You output:**
+**Output:**
 ```
-📊 FairScore: 95.9/100 | Tier: diamond
+📊 FairScore: 65.3/100 | Tier: gold
 
 ✅ TRUSTED — Safe to proceed
 
-🏅 Badges: LST Staker, Diamond Hands, Veteran
+🏅 Badges: Diamond Hands
 
 💡 Improve: None
 ```
@@ -103,7 +99,7 @@ The API returns JSON. Use ONLY these fields:
 
 ## ERRORS
 
-If the API returns an error or no data:
+If API returns error or no data:
 ```
 ❌ Could not retrieve FairScore for this wallet. Please try again.
 ```
