@@ -1,469 +1,193 @@
 # FairScale Reputation Skill
 
-Real-time wallet reputation scoring for Solana. The trust layer for the agentic economy.
+Check Solana wallet reputation scores. Free tier: 100 calls/day, no API key needed.
 
-## Why This Matters
+## What This Does
 
-Agents are transacting 24/7 with wallets they've never seen before. Without reputation data, they're flying blind — accepting trades from sybils, lending to bad actors, getting rugged by wallets that should have been flagged.
+FairScale provides reputation scores (0-100) for any Solana wallet based on 50+ on-chain signals. Use it to:
 
-**This skill gives agents trust intelligence.** One API call before any transaction. Instant decision. No rugs.
+- Check a wallet's trustworthiness before transacting
+- Filter wallets for airdrops or whitelists
+- Build custom scoring models for your use case
+- Add reputation data to your agent's decision-making
+
+## API Endpoint
+
+```
+https://x402.fairscale.xyz
+```
+
+No API key required for free tier.
 
 ---
 
-## Core Rule: Check Before You Transact
-
-**Every agent should check reputation BEFORE executing any transaction.**
-
-This is not optional. This is how trust-aware agents operate.
-
-```
-Incoming transaction request
-    ↓
-Check FairScale score
-    ↓
-Score meets threshold? → Execute
-Score fails? → Reject
-```
-
----
-
-## Quick Start
-
-### Check a Wallet
-```
-GET https://x402.fairscale.xyz/score?wallet=ADDRESS
-```
-
-### Check Risk for Specific Amount
-```
-GET https://x402.fairscale.xyz/check?wallet=ADDRESS&amount=500
-```
-
-### Apply Custom Rules (Pro)
-```
-POST https://x402.fairscale.xyz/score/custom
-{
-  "wallet": "ADDRESS",
-  "rules": {
-    "min_score": 60,
-    "min_age_days": 90,
-    "no_rug_history": true
-  }
-}
-```
-
----
-
-## Trust Tiers
-
-Use this table for every transaction decision:
-
-| Score | Risk Level | Max Transaction | Action |
-|-------|------------|-----------------|--------|
-| 0-30 | Critical | $0 | **Block immediately** |
-| 31-50 | High | $50 | Reject or require manual approval |
-| 51-70 | Medium | $500 | Proceed with caution |
-| 71-85 | Low | $5,000 | Proceed |
-| 86-100 | Minimal | $10,000+ | Full trust |
-
-**Hard rule:** Never transact with a wallet scoring below 30. Ever.
-
----
-
-## Decision Framework
-
-### Before ANY Transaction
-
-```
-1. GET /score?wallet=COUNTERPARTY
-2. Check score against Trust Tiers table
-3. If score < threshold for amount → REJECT
-4. If score ≥ threshold → PROCEED
-```
-
-### Before High-Value Transactions (>$1,000)
-
-```
-1. POST /score/custom with strict rules:
-   - min_score: 70
-   - min_age_days: 180
-   - no_rug_history: true
-   - min_transaction_count: 100
-
-2. If passes: true → PROCEED
-3. If passes: false → REJECT
-```
-
-### Before Interacting with Unknown Agents
-
-```
-1. GET /check?wallet=AGENT_WALLET&amount=TRANSACTION_VALUE
-2. Read recommendation field
-3. "proceed" → Execute
-4. "proceed_with_caution" → Reduce amount or add safeguards
-5. "avoid" → Reject entirely
-```
-
----
-
-## Agent Presets
-
-Copy these rule sets based on your agent's risk tolerance:
-
-### 🛡️ Conservative Agent
-For lending, high-value trades, custodial operations.
-
-```json
-{
-  "rules": {
-    "min_score": 75,
-    "min_age_days": 180,
-    "no_rug_history": true,
-    "min_transaction_count": 200,
-    "min_volume_usd": 10000,
-    "max_burst_ratio": 0.3
-  }
-}
-```
-
-**Behaviour:** Only transacts with established, trusted wallets. Rejects anything suspicious.
-
----
-
-### ⚖️ Balanced Agent
-For general trading, swaps, moderate-value transactions.
-
-```json
-{
-  "rules": {
-    "min_score": 60,
-    "min_age_days": 90,
-    "no_rug_history": true,
-    "min_transaction_count": 50
-  }
-}
-```
-
-**Behaviour:** Filters out bad actors while remaining open to legitimate newer wallets.
-
----
-
-### ⚡ Aggressive Agent
-For high-frequency trading, small amounts, speed-priority operations.
-
-```json
-{
-  "rules": {
-    "min_score": 40,
-    "min_age_days": 14
-  }
-}
-```
-
-**Behaviour:** Accepts more risk for more opportunities. Only blocks the worst actors.
-
----
-
-### 🎯 Airdrop Filter
-For token distributions, NFT mints, community rewards.
-
-```json
-{
-  "rules": {
-    "min_score": 55,
-    "min_age_days": 90,
-    "min_transaction_count": 50,
-    "max_burst_ratio": 0.5
-  }
-}
-```
-
-**Behaviour:** Filters sybils and farmers. Ensures rewards go to real users.
-
----
-
-### 🏦 Lending Agent
-For undercollateralized lending, credit decisions.
-
-```json
-{
-  "rules": {
-    "min_score": 80,
-    "min_age_days": 365,
-    "no_rug_history": true,
-    "min_volume_usd": 50000,
-    "min_transaction_count": 500
-  }
-}
-```
-
-**Behaviour:** Maximum scrutiny. Only lends to wallets with proven long-term track records.
-
----
-
-### 🚪 Gatekeeper Agent
-For access control, whitelist verification, community gating.
-
-```json
-{
-  "rules": {
-    "min_score": 50,
-    "min_age_days": 30,
-    "no_rug_history": true
-  }
-}
-```
-
-**Behaviour:** Keeps out obvious bad actors while remaining accessible.
-
----
-
-## System Prompts for Your Agent
-
-Copy these into your agent's system prompt:
-
-### Trading Agent
-```
-You have access to FairScale for wallet reputation checks.
-
-RULE: Before executing ANY trade, check the counterparty wallet.
-- GET https://x402.fairscale.xyz/score?wallet=WALLET
-
-DECISION:
-- Score < 40: REJECT. Tell user "Counterparty has poor reputation. Trade rejected."
-- Score 40-60: Only proceed if amount < $100
-- Score 60-80: Proceed with caution, warn user of moderate risk
-- Score 80+: Proceed normally
-
-NEVER skip the reputation check. NEVER trade with wallets scoring below 40.
-```
-
-### Lending Agent
-```
-You have access to FairScale for credit decisions.
-
-RULE: Before approving any loan, verify borrower reputation.
-- POST https://x402.fairscale.xyz/score/custom
-- Apply rules: min_score 75, min_age_days 180, no_rug_history true
-
-DECISION:
-- passes: true → Approve loan
-- passes: false → Reject loan, explain which criteria failed
-
-NEVER lend to unverified wallets. NEVER skip the credit check.
-```
-
-### Gatekeeper Agent
-```
-You control access to a gated resource.
-
-RULE: Verify every wallet before granting access.
-- GET https://x402.fairscale.xyz/check?wallet=WALLET
-
-DECISION:
-- recommendation: "proceed" → Grant access
-- recommendation: "proceed_with_caution" → Grant limited access
-- recommendation: "avoid" → Deny access
-
-Log all decisions. Flag any wallet with score below 30 for review.
-```
-
-### Airdrop Distribution Agent
-```
-You distribute tokens to qualified wallets.
-
-RULE: Filter all recipients through FairScale before distribution.
-- POST https://x402.fairscale.xyz/batch with all wallets
-- Only distribute to wallets with score >= 55
-
-FILTER OUT:
-- Score below 55
-- Wallets younger than 90 days
-- Burst ratio above 0.5
-
-These are likely sybils or farmers. Real users deserve the rewards.
-```
-
----
-
-## API Reference
+## Endpoints
 
 ### GET /score
-Basic wallet score lookup.
 
-**Free:** 100 calls/day
+Get a wallet's reputation score.
 
 ```
-GET https://x402.fairscale.xyz/score?wallet=ADDRESS
+GET https://x402.fairscale.xyz/score?wallet=WALLET_ADDRESS
 ```
 
-**Response:**
+Response:
 ```json
 {
-  "wallet": "ADDRESS",
+  "wallet": "7xK9...",
   "fairscore": 72,
   "tier": "gold",
-  "vouch_boost": 1.5,
   "_meta": {
-    "tier": "free",
     "remaining_today": 99
   }
 }
 ```
 
----
-
 ### GET /check
-Pre-transaction risk assessment with amount consideration.
 
-**Free:** 100 calls/day
+Get a risk assessment for a specific transaction amount.
 
 ```
-GET https://x402.fairscale.xyz/check?wallet=ADDRESS&amount=500
+GET https://x402.fairscale.xyz/check?wallet=WALLET_ADDRESS&amount=500
 ```
 
-**Response:**
+Response:
 ```json
 {
-  "wallet": "ADDRESS",
+  "wallet": "7xK9...",
   "fairscore": 72,
   "risk_level": "medium",
   "recommendation": "proceed_with_caution",
-  "max_suggested_amount_usd": 1000,
-  "amount_check": {
-    "requested": 500,
-    "max_suggested": 1000,
-    "proceed": true
-  }
+  "max_suggested_amount_usd": 1000
 }
 ```
 
----
-
 ### POST /score/custom
-Apply custom scoring rules.
 
-**Pro tier required**
+Create custom scoring rules. Requires credits.
 
 ```
 POST https://x402.fairscale.xyz/score/custom
 Content-Type: application/json
 
 {
-  "wallet": "ADDRESS",
+  "wallet": "WALLET_ADDRESS",
   "rules": {
     "min_score": 60,
-    "min_age_days": 180,
-    "no_rug_history": true,
-    "min_transaction_count": 100,
-    "min_volume_usd": 10000,
-    "max_burst_ratio": 0.5,
-    "min_tier": "silver"
+    "min_age_days": 90,
+    "no_rug_history": true
   }
 }
 ```
 
-**Response:**
+Response:
 ```json
 {
-  "wallet": "ADDRESS",
+  "wallet": "7xK9...",
   "passes": true,
-  "fairscore": 72,
   "rule_results": {
     "min_score": { "pass": true, "required": 60, "actual": 72 },
-    "min_age_days": { "pass": true, "required": 180, "actual": 340 },
-    "no_rug_history": { "pass": true, "actual": false }
-  },
-  "recommendation": "proceed"
+    "min_age_days": { "pass": true, "required": 90, "actual": 340 },
+    "no_rug_history": { "pass": true }
+  }
 }
 ```
 
----
-
 ### POST /batch
-Score multiple wallets at once.
 
-**Pro tier required**
+Score multiple wallets at once. Requires credits.
 
 ```
 POST https://x402.fairscale.xyz/batch
 Content-Type: application/json
 
 {
-  "wallets": ["address1", "address2", "address3"]
+  "wallets": ["wallet1", "wallet2", "wallet3"]
 }
 ```
 
-**Response:**
+---
+
+## Custom Rules
+
+Use these with `/score/custom`:
+
+| Rule | Type | Example |
+|------|------|---------|
+| min_score | number | `"min_score": 60` |
+| min_age_days | number | `"min_age_days": 90` |
+| no_rug_history | boolean | `"no_rug_history": true` |
+| min_transaction_count | number | `"min_transaction_count": 100` |
+| min_volume_usd | number | `"min_volume_usd": 5000` |
+| max_burst_ratio | number | `"max_burst_ratio": 0.5` |
+| min_tier | string | `"min_tier": "silver"` |
+
+---
+
+## Score Guide
+
+| Score | Tier | Meaning |
+|-------|------|---------|
+| 80-100 | Platinum | Highly trusted |
+| 60-79 | Gold | Good reputation |
+| 40-59 | Silver | Average |
+| 0-39 | Bronze | Low trust |
+
+---
+
+## Pricing
+
+| Tier | Limit | Cost |
+|------|-------|------|
+| Free | 100 calls/day | $0 |
+| Credits | Unlimited | $0.01/call |
+
+### Get Credits
+
+1. Send USDC to: `fairAUEuR1SCcHL254Vb3F3XpUWLruJ2a11f6QfANEN`
+2. Call `POST /credits/deposit` with your wallet and tx signature
+3. Get a session token
+4. Include `x-session-token` header on requests
+
+---
+
+## Examples
+
+**Check a wallet:**
+```
+GET https://x402.fairscale.xyz/score?wallet=7xK9abc...
+```
+
+**Check risk for $500 trade:**
+```
+GET https://x402.fairscale.xyz/check?wallet=7xK9abc...&amount=500
+```
+
+**Custom rules for lending:**
 ```json
+POST https://x402.fairscale.xyz/score/custom
 {
-  "count": 3,
-  "results": [
-    { "wallet": "address1", "fairscore": 72, "tier": "gold" },
-    { "wallet": "address2", "fairscore": 45, "tier": "silver" },
-    { "wallet": "address3", "fairscore": 23, "tier": "bronze" }
-  ]
+  "wallet": "7xK9abc...",
+  "rules": {
+    "min_score": 70,
+    "min_age_days": 180,
+    "no_rug_history": true
+  }
 }
 ```
 
 ---
 
-## Available Custom Rules
+## Monetise This Skill
 
-| Rule | Type | Description |
-|------|------|-------------|
-| `min_score` | number | Minimum FairScore (0-100) |
-| `min_age_days` | number | Minimum wallet age in days |
-| `no_rug_history` | boolean | Reject if wallet has rug history |
-| `min_transaction_count` | number | Minimum number of transactions |
-| `min_volume_usd` | number | Minimum total volume in USD |
-| `max_burst_ratio` | number | Maximum burst ratio (0-1, lower = more stable) |
-| `min_tier` | string | Minimum tier (bronze/silver/gold/platinum) |
+Build products on top of FairScale:
 
----
+- **Gated access:** Charge users to verify their reputation
+- **Airdrop filtering:** Charge projects to filter sybils
+- **Lending checks:** Charge per credit decision
+- **Premium verification:** Offer "FairScale Verified" badges
 
-## Rate Limits
-
-| Tier | Daily Limit | Per Minute | Price |
-|------|-------------|------------|-------|
-| Free | 100 | 10 | $0 |
-| Pro | 10,000 | 100 | $50/mo |
-| Enterprise | Unlimited | 1,000 | $500/mo |
-
----
-
-## Upgrade to Pro
-
-For custom rules and higher limits:
-
-```
-POST https://x402.fairscale.xyz/upgrade
-{
-  "api_key": "your_key",
-  "tier": "pro",
-  "signature": "payment_tx_signature"
-}
-```
-
----
-
-## Installation
-
-```bash
-npx clawhub install fairscale-solana
-```
-
-Or browse: [clawhub.ai/RisheeA/fairscale-solana](https://clawhub.ai/RisheeA/fairscale-solana)
-
----
-
-## The Bottom Line
-
-Trust-aware agents don't get rugged.
-
-Every transaction. Every counterparty. Every time.
-
-Check first. Transact second.
+Your agent can charge users while paying $0.01/call to FairScale.
 
 ---
 
@@ -471,4 +195,3 @@ Check first. Transact second.
 
 - Docs: https://docs.fairscale.xyz
 - API: https://x402.fairscale.xyz
-- ClawHub: https://clawhub.ai/RisheeA/fairscale-solana
